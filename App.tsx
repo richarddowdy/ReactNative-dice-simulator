@@ -1,7 +1,9 @@
 import React, { useReducer } from "react";
 import Constants from "expo-constants";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { RNG } from "./util/rng";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type StateType = {
   D4: number;
@@ -26,7 +28,7 @@ const initialState: StateType = {
   D20: 0,
 };
 
-const rows: Array<Array<Array<string | number>>> = [
+const rows: Array<Array<[string, number]>> = [
   [
     ["D4", 4],
     ["D6", 6],
@@ -55,21 +57,20 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <View
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: 50,
-          backgroundColor: "blue",
-          width: "100%",
-        }}
-      >
-        <Text>DnD Dice Anywhere</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>DnD Dice Anywhere</Text>
+        <Pressable
+          style={styles.settingsButton}
+          onPress={() => {
+            console.log("trying to open the settings");
+          }}
+        >
+          <FontAwesome name="cog" size={32} color="black" />
+        </Pressable>
       </View>
       {rows.map((row, idx) => (
         <View key={`row-${idx}`} style={styles.row}>
-          {row.map((dice: Array<any>) => {
+          {row.map((dice: [string, number]) => {
             const [die, value] = dice;
             return (
               <Pressable
@@ -99,6 +100,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: Constants.statusBarHeight,
   },
+  header: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    alignItems: "center",
+    height: 70,
+    backgroundColor: "blue",
+    width: "100%",
+  },
+  headerText: {
+    fontSize: 24,
+  },
+  settingsButton: {
+    borderWidth: 2,
+    borderColor: "black",
+    padding: 3,
+  },
   row: {
     flex: 1,
     flexDirection: "row",
@@ -110,6 +129,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 5,
     borderColor: "red",
+    borderRadius: 15,
+    margin: 5,
   },
   diceName: {
     fontSize: 20,
