@@ -65,7 +65,20 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [bgColor, setBgColor] = useState("#fffafa");
   const [dieColor, setDieColor] = useState("#444");
+  const [fontColor, setFontColor] = useState("#000");
   const [colorFn, setColorFn] = useState(() => setBgColor);
+
+  const rollEffect = (die: string, dieMax: number, count: number = 0, speed: number = 30) => {
+    count++;
+
+    dispatch({ type: die, value: RNG(dieMax) });
+
+    if (count >= 25) {
+      return;
+    }
+    speed = speed * 1.1;
+    setTimeout(() => rollEffect(die, dieMax, count, speed), speed);
+  };
 
   return (
     <View style={{ ...styles.container, backgroundColor: bgColor }}>
@@ -90,7 +103,7 @@ export default function App() {
         >
           <TouchableOpacity onPressOut={() => setModalVisible(!modalVisible)} style={styles.centeredView}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalView}>
+              <View style={{ backgroundColor: "snow", ...styles.modalView }}>
                 <Pressable
                   style={{ position: "absolute", top: 15, right: 20 }}
                   onPress={() => setModalVisible(!modalVisible)}
@@ -107,23 +120,32 @@ export default function App() {
                   }}
                 >
                   <Pressable
-                    style={styles.fnSelectButton}
+                    style={{ backgroundColor: "snow", ...styles.fnSelectButton }}
                     onPress={() => {
                       setColorFn(() => setBgColor);
                     }}
                   >
-                    <Text style={{ fontSize: 22, fontWeight: "800" }}>Background</Text>
+                    <Text style={{ color: "#353839", fontSize: 22, fontWeight: "800" }}>Background</Text>
                   </Pressable>
                   <Pressable
-                    style={styles.fnSelectButton}
+                    style={{ backgroundColor: "snow", ...styles.fnSelectButton }}
                     onPress={() => {
                       setColorFn(() => setDieColor);
                     }}
                   >
-                    <Text style={{ fontSize: 22, fontWeight: "800" }}>Die</Text>
+                    <Text style={{ color: "#353839", fontSize: 22, fontWeight: "800" }}>Die</Text>
+                  </Pressable>
+                  <Pressable
+                    style={{ backgroundColor: "snow", ...styles.fnSelectButton }}
+                    onPress={() => {
+                      setColorFn(() => setFontColor);
+                    }}
+                  >
+                    <Text style={{ color: "#353839", fontSize: 22, fontWeight: "800" }}>Font</Text>
                   </Pressable>
                 </View>
                 <TriangleColorPicker
+                  defaultColor={""}
                   onColorSelected={(color) => {
                     colorFn(color);
                   }}
@@ -139,17 +161,12 @@ export default function App() {
           {row.map((dice: [string, number]) => {
             const [die, value] = dice;
             return (
-              <Pressable
-                key={die}
-                style={{ ...styles.card, backgroundColor: dieColor }}
-                onPress={() => {
-                  dispatch({ type: die, value: RNG(value) });
-                }}
-              >
-                <Text style={styles.diceName}>{die}</Text>
-                <Text style={styles.diceValue}>{state[die as keyof StateType]}</Text>
-                {state[die as keyof StateType] === 20 && <Text style={styles.criticalText}>"Critical!!!"</Text>}
-              </Pressable>
+              <View key={die} style={{ backgroundColor: dieColor, ...styles.card }}>
+                <Pressable onPress={() => rollEffect(die, value)}>
+                  <Text style={{ color: fontColor, ...styles.diceName }}>{die}</Text>
+                  <Text style={{ color: fontColor, ...styles.diceValue }}>{state[die as keyof StateType]}</Text>
+                </Pressable>
+              </View>
             );
           })}
         </View>
@@ -188,10 +205,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 5,
-    borderColor: "red",
     borderRadius: 15,
-    margin: 5,
+    margin: 10,
+    // shadow box
+    elevation: 50,
+    shadowColor: "black",
   },
   diceName: {
     fontSize: 20,
@@ -214,18 +232,13 @@ const styles = StyleSheet.create({
   modalView: {
     height: "60%",
     margin: 20,
-    width: "80%",
-    backgroundColor: "snow",
+    width: "90%",
     borderRadius: 20,
+    borderColor: "grey",
+    borderWidth: 1,
     padding: 25,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
     elevation: 5,
   },
   fnSelectButton: {
@@ -233,10 +246,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 50,
     borderWidth: 2,
-    borderColor: "black",
+    borderColor: "grey",
     borderRadius: 10,
     padding: 5,
     paddingHorizontal: 10,
-    backgroundColor: "teal",
   },
 });
