@@ -1,8 +1,18 @@
-import React, { useReducer } from "react";
+import React, { useReducer, useState } from "react";
 import Constants from "expo-constants";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  Modal,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  StatusBar,
+} from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { RNG } from "./util/rng";
+import { TriangleColorPicker } from "react-native-color-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type StateType = {
@@ -44,8 +54,6 @@ const rows: Array<Array<[string, number]>> = [
 ];
 
 const reducer = (state: StateType, action: ActionType) => {
-  console.log("current action", action);
-  console.log("current state", state);
   switch (action.type) {
     default:
       return { ...state, [action.type]: action.value };
@@ -54,19 +62,77 @@ const reducer = (state: StateType, action: ActionType) => {
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [bgColor, setBgColor] = useState("#fffafa");
+  const [dieColor, setDieColor] = useState("#444");
+  const [colorFn, setColorFn] = useState(() => setBgColor);
 
   return (
-    <View style={styles.container}>
+    <View style={{ ...styles.container, backgroundColor: bgColor }}>
+      <StatusBar />
       <View style={styles.header}>
         <Text style={styles.headerText}>DnD Dice Anywhere</Text>
         <Pressable
           style={styles.settingsButton}
           onPress={() => {
-            console.log("trying to open the settings");
+            setModalVisible(!modalVisible);
           }}
         >
           <FontAwesome name="cog" size={32} color="black" />
         </Pressable>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => {
+            setModalVisible(!modalVisible);
+          }}
+        >
+          <TouchableOpacity onPressOut={() => setModalVisible(!modalVisible)} style={styles.centeredView}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalView}>
+                <Pressable
+                  style={{ position: "absolute", top: 15, right: 20 }}
+                  onPress={() => setModalVisible(!modalVisible)}
+                >
+                  <FontAwesome name="close" size={32} color="black" />
+                </Pressable>
+                <View
+                  style={{
+                    width: "100%",
+                    flexDirection: "row",
+                    justifyContent: "space-around",
+                    alignItems: "center",
+                    marginTop: 40,
+                  }}
+                >
+                  <Pressable
+                    style={styles.fnSelectButton}
+                    onPress={() => {
+                      setColorFn(() => setBgColor);
+                    }}
+                  >
+                    <Text style={{ fontSize: 22, fontWeight: "800" }}>Background</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.fnSelectButton}
+                    onPress={() => {
+                      setColorFn(() => setDieColor);
+                    }}
+                  >
+                    <Text style={{ fontSize: 22, fontWeight: "800" }}>Die</Text>
+                  </Pressable>
+                </View>
+                <TriangleColorPicker
+                  onColorSelected={(color) => {
+                    colorFn(color);
+                  }}
+                  style={{ flex: 1, width: 200, marginBottom: 15 }}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </TouchableOpacity>
+        </Modal>
       </View>
       {rows.map((row, idx) => (
         <View key={`row-${idx}`} style={styles.row}>
@@ -75,7 +141,7 @@ export default function App() {
             return (
               <Pressable
                 key={die}
-                style={styles.card}
+                style={{ ...styles.card, backgroundColor: dieColor }}
                 onPress={() => {
                   dispatch({ type: die, value: RNG(value) });
                 }}
@@ -95,10 +161,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: Constants.statusBarHeight,
+    // marginTop: Constants.statusBarHeight,
   },
   header: {
     display: "flex",
@@ -107,16 +172,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: "center",
     height: 70,
-    backgroundColor: "blue",
     width: "100%",
   },
   headerText: {
     fontSize: 24,
   },
   settingsButton: {
-    borderWidth: 2,
-    borderColor: "black",
-    padding: 3,
+    padding: 4,
   },
   row: {
     flex: 1,
@@ -124,7 +186,6 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    backgroundColor: "grey",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 5,
@@ -142,5 +203,40 @@ const styles = StyleSheet.create({
   criticalText: {
     fontSize: 26,
     fontWeith: "800",
+  },
+  // Modal
+  centeredView: {
+    flex: 1,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    marginTop: 22,
+  },
+  modalView: {
+    height: "60%",
+    margin: 20,
+    width: "80%",
+    backgroundColor: "snow",
+    borderRadius: 20,
+    padding: 25,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  fnSelectButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    height: 50,
+    borderWidth: 2,
+    borderColor: "black",
+    borderRadius: 10,
+    padding: 5,
+    paddingHorizontal: 10,
+    backgroundColor: "teal",
   },
 });
