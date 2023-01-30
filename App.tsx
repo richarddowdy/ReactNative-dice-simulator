@@ -1,6 +1,7 @@
-import React, { useReducer, useState } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import Constants from "expo-constants";
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -15,13 +16,13 @@ import { RNG } from "./util/rng";
 import { TriangleColorPicker } from "react-native-color-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type StateType = {
-  D4: number;
-  D6: number;
-  D8: number;
-  D10: number;
-  D12: number;
-  D20: number;
+type DiceStateType = {
+  D4?: number;
+  D6?: number;
+  D8?: number;
+  D10?: number;
+  D12?: number;
+  D20?: number;
 };
 
 type ActionType = {
@@ -29,7 +30,13 @@ type ActionType = {
   value: number;
 };
 
-const initialState: StateType = {
+type ColorsType = {
+  background: string;
+  die: string;
+  font: string;
+};
+
+const initialDiceState: DiceStateType = {
   D4: 0,
   D6: 0,
   D8: 0,
@@ -53,19 +60,25 @@ const rows: Array<Array<[string, number]>> = [
   ],
 ];
 
-const reducer = (state: StateType, action: ActionType) => {
+const reducer = (state: DiceStateType, action: ActionType) => {
   switch (action.type) {
+    case "reset":
+      return initialDiceState;
     default:
       return { ...state, [action.type]: action.value };
   }
 };
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialDiceState);
   const [modalVisible, setModalVisible] = useState(false);
-  const [bgColor, setBgColor] = useState("#fffafa");
-  const [dieColor, setDieColor] = useState("#444");
-  const [fontColor, setFontColor] = useState("#000");
+  const [finishedLoading, setFinishedLoading] = useState(false);
+  // https://coolors.co/palette/000814-001d3d-003566-ffc300-ffd60a
+  // https://coolors.co/palette/0d1b2a-1b263b-415a77-778da9-e0e1dd
+
+  const [bgColor, setBgColor] = useState("#000814");
+  const [dieColor, setDieColor] = useState("#001d3d");
+  const [fontColor, setFontColor] = useState("#e0e1dd");
   const [colorFn, setColorFn] = useState(() => setBgColor);
 
   const rollEffect = (die: string, dieMax: number, count: number = 0, speed: number = 30) => {
@@ -80,11 +93,49 @@ export default function App() {
     setTimeout(() => rollEffect(die, dieMax, count, speed), speed);
   };
 
+  // useEffect(() => {
+  //   const fetchColors = async () => {
+  //     const colors: { background: string; die: string; font: string } = JSON.parse(
+  //       (await AsyncStorage.getItem("diceColors")) || "{}"
+  //     );
+  //     const { background, die, font } = colors;
+  //     setBgColor(background);
+  //     setDieColor(die);
+  //     setFontColor(font);
+  //   };
+  //   fetchColors();
+  //   setFinishedLoading(true);
+  // }, []);
+
+  // const handleColorChange = async () => {
+  //   const savedColors: ColorsType = {
+  //     background: bgColor,
+  //     die: dieColor,
+  //     font: fontColor,
+  //   };
+  //   try {
+  //     await AsyncStorage.setItem("diceColors", JSON.stringify(savedColors));
+  //   } catch (e) {
+  //     console.warn(e);
+  //   }
+  // };
+
+  // if (!finishedLoading) {
+  //   return (
+  //     <View style={{ ...styles.container }}>
+  //       <ActivityIndicator size="large" color="blue" />
+  //     </View>
+  //   );
+  // }
+
   return (
     <View style={{ ...styles.container, backgroundColor: bgColor }}>
       <StatusBar />
       <View style={styles.header}>
-        <Text style={styles.headerText}>DnD Dice Anywhere</Text>
+        <Text style={styles.headerText}>Dice Anywhere</Text>
+        <Pressable style={{ padding: 5 }} onPress={() => dispatch({ type: "reset", value: 0 })}>
+          <Text>Clear</Text>
+        </Pressable>
         <Pressable
           style={styles.settingsButton}
           onPress={() => {
@@ -103,7 +154,7 @@ export default function App() {
         >
           <TouchableOpacity onPressOut={() => setModalVisible(!modalVisible)} style={styles.centeredView}>
             <TouchableWithoutFeedback>
-              <View style={{ backgroundColor: "snow", ...styles.modalView }}>
+              <View style={{ backgroundColor: "#06191d", ...styles.modalView }}>
                 <Pressable
                   style={{ position: "absolute", top: 15, right: 20 }}
                   onPress={() => setModalVisible(!modalVisible)}
@@ -162,9 +213,19 @@ export default function App() {
             const [die, value] = dice;
             return (
               <View key={die} style={{ backgroundColor: dieColor, ...styles.card }}>
-                <Pressable onPress={() => rollEffect(die, value)}>
+                <Pressable
+                  style={{
+                    flex: 1,
+                    width: "100%",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    // borderWidth: 1,
+                    // borderColor: "black",
+                  }}
+                  onPress={() => rollEffect(die, value)}
+                >
                   <Text style={{ color: fontColor, ...styles.diceName }}>{die}</Text>
-                  <Text style={{ color: fontColor, ...styles.diceValue }}>{state[die as keyof StateType]}</Text>
+                  <Text style={{ color: fontColor, ...styles.diceValue }}>{state[die as keyof DiceStateType]}</Text>
                 </Pressable>
               </View>
             );
@@ -193,6 +254,7 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 24,
+    color: "#e3e4db",
   },
   settingsButton: {
     padding: 4,
@@ -203,8 +265,6 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
     borderRadius: 15,
     margin: 10,
     // shadow box
@@ -213,6 +273,9 @@ const styles = StyleSheet.create({
   },
   diceName: {
     fontSize: 20,
+    position: "absolute",
+    top: 10,
+    left: 20,
   },
   diceValue: {
     fontSize: 50,
@@ -230,9 +293,9 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   modalView: {
-    height: "60%",
+    height: "70%",
     margin: 20,
-    width: "90%",
+    width: "92%",
     borderRadius: 20,
     borderColor: "grey",
     borderWidth: 1,
