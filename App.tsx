@@ -17,17 +17,21 @@ import { TriangleColorPicker } from "react-native-color-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type DiceStateType = {
-  D4?: number;
-  D6?: number;
-  D8?: number;
-  D10?: number;
-  D12?: number;
-  D20?: number;
+  D4: number;
+  D6: number;
+  D8: number;
+  D10: number;
+  D12: number;
+  D20: number;
 };
 
-type ActionType = {
+type DiceActionType = {
   type: string;
   value: number;
+};
+type ColorActionType = {
+  type: string;
+  value: string;
 };
 
 type ColorsType = {
@@ -45,6 +49,12 @@ const initialDiceState: DiceStateType = {
   D20: 0,
 };
 
+const initialColorState: ColorsType = {
+  background: "#000814",
+  die: "#001d3d",
+  font: "#e0e1dd",
+};
+
 const rows: Array<Array<[string, number]>> = [
   [
     ["D4", 4],
@@ -60,7 +70,7 @@ const rows: Array<Array<[string, number]>> = [
   ],
 ];
 
-const reducer = (state: DiceStateType, action: ActionType) => {
+const diceReducer = (state: DiceStateType, action: DiceActionType) => {
   switch (action.type) {
     case "reset":
       return initialDiceState;
@@ -68,23 +78,32 @@ const reducer = (state: DiceStateType, action: ActionType) => {
       return { ...state, [action.type]: action.value };
   }
 };
+const colorReducer = (state: ColorsType, action: ColorActionType) => {
+  switch (action.type) {
+    // case "reset":
+    //   return initialDiceState;
+    default:
+      return { ...state, [action.type]: action.value };
+  }
+};
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initialDiceState);
+  const [diceState, setDice] = useReducer(diceReducer, initialDiceState);
+  const [colorState, setColor] = useReducer(colorReducer, initialColorState);
   const [modalVisible, setModalVisible] = useState(false);
   const [finishedLoading, setFinishedLoading] = useState(false);
   // https://coolors.co/palette/000814-001d3d-003566-ffc300-ffd60a
   // https://coolors.co/palette/0d1b2a-1b263b-415a77-778da9-e0e1dd
 
-  const [bgColor, setBgColor] = useState("#000814");
-  const [dieColor, setDieColor] = useState("#001d3d");
-  const [fontColor, setFontColor] = useState("#e0e1dd");
-  const [colorFn, setColorFn] = useState(() => setBgColor);
+  // const [bgColor, setBgColor] = useState("#000814");
+  // const [dieColor, setDieColor] = useState("#001d3d");
+  // const [fontColor, setFontColor] = useState("#e0e1dd");
+  const [colorFn, setColorFn] = useState("background");
 
   const rollEffect = (die: string, dieMax: number, count: number = 0, speed: number = 30) => {
     count++;
 
-    dispatch({ type: die, value: RNG(dieMax) });
+    setDice({ type: die, value: RNG(dieMax) });
 
     if (count >= 25) {
       return;
@@ -93,47 +112,42 @@ export default function App() {
     setTimeout(() => rollEffect(die, dieMax, count, speed), speed);
   };
 
-  // useEffect(() => {
-  //   const fetchColors = async () => {
-  //     const colors: { background: string; die: string; font: string } = JSON.parse(
-  //       (await AsyncStorage.getItem("diceColors")) || "{}"
-  //     );
-  //     const { background, die, font } = colors;
-  //     setBgColor(background);
-  //     setDieColor(die);
-  //     setFontColor(font);
-  //   };
-  //   fetchColors();
-  //   setFinishedLoading(true);
-  // }, []);
+  useEffect(() => {
+    const fetchColors = async () => {
+      const colors: { background: string; die: string; font: string } = JSON.parse(
+        (await AsyncStorage.getItem("diceColors")) || "{}"
+      );
+      setColor({ type: "background", value: colors.background });
+      setColor({ type: "die", value: colors.die });
+      setColor({ type: "font", value: colors.font });
+    };
+    fetchColors();
+    setFinishedLoading(true);
+  }, []);
 
-  // const handleColorChange = async () => {
-  //   const savedColors: ColorsType = {
-  //     background: bgColor,
-  //     die: dieColor,
-  //     font: fontColor,
-  //   };
-  //   try {
-  //     await AsyncStorage.setItem("diceColors", JSON.stringify(savedColors));
-  //   } catch (e) {
-  //     console.warn(e);
-  //   }
-  // };
+  const handleColorChange = async (colorAction: ColorActionType) => {
+    try {
+      setColor(colorAction);
+      await AsyncStorage.setItem("diceColors", JSON.stringify(colorState));
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
-  // if (!finishedLoading) {
-  //   return (
-  //     <View style={{ ...styles.container }}>
-  //       <ActivityIndicator size="large" color="blue" />
-  //     </View>
-  //   );
-  // }
+  if (!finishedLoading) {
+    return (
+      <View style={{ ...styles.container }}>
+        <ActivityIndicator size="large" color="blue" />
+      </View>
+    );
+  }
 
   return (
-    <View style={{ ...styles.container, backgroundColor: bgColor }}>
+    <View style={{ ...styles.container, backgroundColor: colorState["background"] }}>
       <StatusBar />
       <View style={styles.header}>
         <Text style={styles.headerText}>Dice Anywhere</Text>
-        <Pressable style={{ padding: 5 }} onPress={() => dispatch({ type: "reset", value: 0 })}>
+        <Pressable style={{ padding: 5 }} onPress={() => setDice({ type: "reset", value: 0 })}>
           <Text>Clear</Text>
         </Pressable>
         <Pressable
@@ -173,7 +187,7 @@ export default function App() {
                   <Pressable
                     style={{ backgroundColor: "snow", ...styles.fnSelectButton }}
                     onPress={() => {
-                      setColorFn(() => setBgColor);
+                      setColorFn(() => "background");
                     }}
                   >
                     <Text style={{ color: "#353839", fontSize: 22, fontWeight: "800" }}>Background</Text>
@@ -181,7 +195,7 @@ export default function App() {
                   <Pressable
                     style={{ backgroundColor: "snow", ...styles.fnSelectButton }}
                     onPress={() => {
-                      setColorFn(() => setDieColor);
+                      setColorFn(() => "die");
                     }}
                   >
                     <Text style={{ color: "#353839", fontSize: 22, fontWeight: "800" }}>Die</Text>
@@ -189,7 +203,7 @@ export default function App() {
                   <Pressable
                     style={{ backgroundColor: "snow", ...styles.fnSelectButton }}
                     onPress={() => {
-                      setColorFn(() => setFontColor);
+                      setColorFn(() => "font");
                     }}
                   >
                     <Text style={{ color: "#353839", fontSize: 22, fontWeight: "800" }}>Font</Text>
@@ -198,7 +212,7 @@ export default function App() {
                 <TriangleColorPicker
                   defaultColor={""}
                   onColorSelected={(color) => {
-                    colorFn(color);
+                    handleColorChange({ type: colorFn, value: color });
                   }}
                   style={{ flex: 1, width: 200, marginBottom: 15 }}
                 />
@@ -212,7 +226,7 @@ export default function App() {
           {row.map((dice: [string, number]) => {
             const [die, value] = dice;
             return (
-              <View key={die} style={{ backgroundColor: dieColor, ...styles.card }}>
+              <View key={die} style={{ backgroundColor: colorState.die, ...styles.card }}>
                 <Pressable
                   style={{
                     flex: 1,
@@ -224,8 +238,10 @@ export default function App() {
                   }}
                   onPress={() => rollEffect(die, value)}
                 >
-                  <Text style={{ color: fontColor, ...styles.diceName }}>{die}</Text>
-                  <Text style={{ color: fontColor, ...styles.diceValue }}>{state[die as keyof DiceStateType]}</Text>
+                  <Text style={{ color: colorState.font, ...styles.diceName }}>{die}</Text>
+                  <Text style={{ color: colorState.font, ...styles.diceValue }}>
+                    {diceState[die as keyof DiceStateType]}
+                  </Text>
                 </Pressable>
               </View>
             );
